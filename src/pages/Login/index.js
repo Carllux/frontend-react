@@ -2,6 +2,15 @@ import React, { Component } from 'react';
 import { Form, FormGroup, Label, Input, Button, Alert } from 'reactstrap';
 import Header from '../../components/Header';
 
+const parseReadableStreamToJson = async (error) => {
+    const data = (await error.getReader().read()).value
+    console.log(data);
+    const str = String.fromCharCode.apply(String, data);
+    console.log(str); // Ao converter a ReadableStream do Error.body
+    // a formatação UTF-8 fica bugada, a corrigir
+    return JSON.parse(str);
+}
+
 export default class Login extends Component {
 
     constructor() {
@@ -24,17 +33,20 @@ export default class Login extends Component {
 
         fetch('http://localhost:3000/login', requestInfo)
             .then(response => {
-                // console.log(response);
                 if (response.ok) {
                     return response.json()
                 }
                 // throw new Error(response.errors)
                 return Promise.reject(response);
             })
-            // .then(token => console.log(token))
-            .catch(e =>
-                console.log(e)
-                // this.setState({ message: e.message })
+            .then(response => response)
+            .then(token => console.log(token))
+            .catch(async (e) => {
+                const errs = await parseReadableStreamToJson(e.body)
+                const errorMessage = errs.errors[0]
+                console.log(errs);
+                this.setState({ message: errorMessage })
+            }
             )
     }
 
